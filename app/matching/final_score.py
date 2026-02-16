@@ -4,6 +4,9 @@ from app.matching.semantic import semantic_sentence_matching
 from app.matching.skills import match_skills, SkillMatchResult
 from app.matching.title import match_title, TitleMatchResult
 from app.matching.experience import match_experience, ExperienceMatchResult
+from app.matching.missing import get_missing_skills
+from app.matching.explanation import generate_explanation
+
 from app.config.weights import SCORE_WEIGHTS
 from app.config.thresholds import DECISION_THRESHOLDS
 
@@ -17,7 +20,9 @@ class FinalMatchResult:
         semantic_explainability: List[Dict],
         skills: SkillMatchResult,
         title: TitleMatchResult,
-        experience: ExperienceMatchResult
+        experience: ExperienceMatchResult,
+        missing_skills: List[str],
+        explanation: str
     ):
         # Raw score (0 → 1)
         self.raw_score = round(final_score, 3)
@@ -31,11 +36,15 @@ class FinalMatchResult:
         self.skills = skills
         self.title = title
         self.experience = experience
+        self.missing_skills = missing_skills
+        self.explanation = explanation
 
     def to_dict(self) -> Dict:
         return {
             "match_score": self.match_score,
             "decision": self.decision,
+            "missing_skills": self.missing_skills,
+            "explanation": self.explanation,
             "details": {
                 "raw_score": self.raw_score,
                 "semantic_score": self.semantic_score,
@@ -114,7 +123,24 @@ def calculate_final_score(
         decision = "REJECT"
 
     # ------------------------------
-    # 7️⃣ Return Structured Result
+    # 7️⃣ Missing Skills
+    # ------------------------------
+    missing_skills = get_missing_skills(
+        candidate_skills=parsed_cv.get("skills", []),
+        job_skills=job_data.get("skills", [])
+    )
+
+    # ------------------------------
+    # 8️⃣ Explanation
+    # ------------------------------
+    explanation = generate_explanation(
+        match_score=final_score * 100,
+        decision=decision,
+        missing_skills=missing_skills
+    )
+
+    # ------------------------------
+    # 9️⃣ Return Structured Result
     # ------------------------------
     return FinalMatchResult(
         final_score=final_score,
@@ -123,5 +149,7 @@ def calculate_final_score(
         decision=decision,
         skills=skills_result,
         title=title_result,
-        experience=experience_result
+        experience=experience_result,
+        missing_skills=missing_skills,
+        explanation=explanation
     )
