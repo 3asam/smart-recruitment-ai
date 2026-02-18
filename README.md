@@ -1,63 +1,90 @@
-🔥 Smart Recruitment AI
+Smart Recruitment AI
 
 AI-powered Applicant Tracking System (ATS) microservice built with FastAPI.
 
-🚀 Overview
+Overview
 
-Smart Recruitment AI is an intelligent recruitment microservice designed to:
+Smart Recruitment AI is an intelligent recruitment microservice designed to automate:
 
-📄 Parse CV PDFs
+CV parsing and structured data extraction
 
-🧠 Extract structured candidate data
+Candidate–job semantic matching
 
-🎯 Match candidates with job descriptions
+Match scoring (0–100%)
 
-📊 Calculate match score (0–100%)
+Hiring decision support (ACCEPT / PENDING / REJECT)
 
-✅ Provide hiring decision (ACCEPT / PENDING / REJECT)
+Candidate ranking based on job fit
 
-🏗️ Architecture
+The system is built as a modular, production-ready FastAPI service.
 
-The AI runs as a FastAPI microservice with the following endpoints:
+Architecture
 
-📌 Endpoints
+The system follows a layered architecture:
+
+API Layer (FastAPI endpoints)
+
+AI & Matching Engine
+
+Scoring & Decision Logic
+
+Parsing & Skill Extraction Modules
+
+Project structure:
+
+smart-recruitment-ai/
+│
+├── main.py              # Entry point
+├── app/
+│   ├── main.py          # FastAPI app
+│   ├── parsing/         # CV parsing logic
+│   ├── matching/        # Matching & ranking engine
+│   ├── core/            # Embeddings & model loading
+│   ├── schemas/         # Request/response models
+│   └── config/          # Thresholds & settings
+│
+└── requirements.txt
+
+API Endpoints
 POST /api/ai/parse-cv
 
-Parses and extracts structured data from a CV file.
+Extracts structured information from a CV.
 
 POST /api/ai/match-job
 
-Matches a parsed CV against a job description and returns:
+Matches a candidate against a job description and returns:
 
 match_score (percentage)
 
 decision (ACCEPT / PENDING / REJECT)
 
-details
-
 raw_score
 
 semantic_score
 
+missing_skills
+
 extracted skills
 
-predicted title
+experience evaluation
 
-experience level
+POST /api/ai/rank-candidates
 
-🧠 AI Components
+Ranks multiple candidates against a job description based on match score.
 
-Sentence Transformers (semantic similarity)
+AI Components
 
-Skill extraction engine
+Semantic similarity using Sentence Transformers
+
+Skill extraction and normalization
+
+Experience alignment logic
 
 Missing skills detection
 
-Ranking system
+Configurable decision thresholds
 
-Decision threshold logic
-
-🛠️ Tech Stack
+Technology Stack
 
 Python
 
@@ -73,21 +100,90 @@ spaCy
 
 PDF parsing tools
 
-📊 Decision Logic
-The final hiring decision is based on configurable thresholds:
+🏗️ System Design
+High-Level Architecture
+                ┌──────────────────────┐
+                │   Frontend / ATS     │
+                └──────────┬───────────┘
+                           │ HTTP Request
+                           ▼
+                ┌──────────────────────┐
+                │   FastAPI Layer      │
+                │  (API Endpoints)     │
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │  Parsing Engine      │
+                │  (CV Extraction)     │
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │  Matching Engine     │
+                │  - Semantic Similarity
+                │  - Skill Scoring
+                │  - Experience Check
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │  Scoring & Decision  │
+                │  Threshold Logic     │
+                └──────────┬───────────┘
+                           │
+                           ▼
+                ┌──────────────────────┐
+                │   JSON Response      │
+                │  Score + Decision    │
+                └──────────────────────┘
 
-ACCEPT → High match
+🔄 Request Flow
 
-PENDING → Medium match
+Client sends CV and Job Description.
 
-REJECT → Low match
+CV is parsed into structured data.
 
-Thresholds can be adjusted in the configuration file.
+Embeddings are generated for semantic comparison.
 
-🎓 Project Context
-This project was developed as a Graduation Project focused on applying AI in recruitment automation and decision support systems.
+Skill and experience alignment is calculated.
 
+A weighted scoring algorithm computes the final score.
 
+Decision thresholds determine ACCEPT / PENDING / REJECT.
+
+Structured response is returned.
+
+🧠 AI Processing Pipeline
+Raw CV
+   ↓
+Text Extraction
+   ↓
+Skill Extraction
+   ↓
+Embedding Generation (Sentence Transformers)
+   ↓
+Semantic Similarity Calculation
+   ↓
+Skill Overlap Scoring
+   ↓
+Experience Validation
+   ↓
+Weighted Final Score
+   ↓
+Decision Logic
+
+🎯 Design Principles
+
+Separation of Concerns (API vs AI logic)
+
+Modular architecture for scalability
+
+Extensible scoring pipeline
+
+Microservice-ready deployment
+
+Configurable decision thresholds
 
 ## ▶️ Run Locally
 
@@ -95,4 +191,5 @@ This project was developed as a Graduation Project focused on applying AI in rec
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 http://127.0.0.1:8000/docs
+
 
