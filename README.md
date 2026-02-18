@@ -30,21 +30,6 @@ Scoring & Decision Logic
 
 Parsing & Skill Extraction Modules
 
-Project structure:
-
-smart-recruitment-ai/
-│
-├── main.py              # Entry point
-├── app/
-│   ├── main.py          # FastAPI app
-│   ├── parsing/         # CV parsing logic
-│   ├── matching/        # Matching & ranking engine
-│   ├── core/            # Embeddings & model loading
-│   ├── schemas/         # Request/response models
-│   └── config/          # Thresholds & settings
-│
-└── requirements.txt
-
 API Endpoints
 POST /api/ai/parse-cv
 
@@ -100,43 +85,7 @@ spaCy
 
 PDF parsing tools
 
-🏗️ System Design
-High-Level Architecture
-                ┌──────────────────────┐
-                │   Frontend / ATS     │
-                └──────────┬───────────┘
-                           │ HTTP Request
-                           ▼
-                ┌──────────────────────┐
-                │   FastAPI Layer      │
-                │  (API Endpoints)     │
-                └──────────┬───────────┘
-                           │
-                           ▼
-                ┌──────────────────────┐
-                │  Parsing Engine      │
-                │  (CV Extraction)     │
-                └──────────┬───────────┘
-                           │
-                           ▼
-                ┌──────────────────────┐
-                │  Matching Engine     │
-                │  - Semantic Similarity
-                │  - Skill Scoring
-                │  - Experience Check
-                └──────────┬───────────┘
-                           │
-                           ▼
-                ┌──────────────────────┐
-                │  Scoring & Decision  │
-                │  Threshold Logic     │
-                └──────────┬───────────┘
-                           │
-                           ▼
-                ┌──────────────────────┐
-                │   JSON Response      │
-                │  Score + Decision    │
-                └──────────────────────┘
+
 
 🔄 Request Flow
 
@@ -191,5 +140,6 @@ Configurable decision thresholds
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 http://127.0.0.1:8000/docs
+
 
 
