@@ -1,58 +1,93 @@
-# Smart Recruitment AI 🔥
+🔥 Smart Recruitment AI
 
-An AI-powered ATS (Applicant Tracking System) microservice built with FastAPI.
+AI-powered Applicant Tracking System (ATS) microservice built with FastAPI.
 
-This system:
-- Parses CV PDFs
-- Extracts structured data
-- Matches candidates with job descriptions
-- Calculates intelligent similarity scores
-- Returns hiring decisions (ACCEPT / PENDING / REJECT)
+🚀 Overview
 
----
+Smart Recruitment AI is an intelligent recruitment microservice designed to:
 
-## 🚀 Tech Stack
+📄 Parse CV PDFs
 
-- FastAPI
-- Sentence-Transformers (MiniLM)
-- PyTorch
-- Scikit-learn
-- PDFPlumber
-- Python 3.10
+🧠 Extract structured candidate data
 
----
+🎯 Match candidates with job descriptions
 
-## 📌 API Endpoints
+📊 Calculate match score (0–100%)
 
-### 1️⃣ Parse CV
+✅ Provide hiring decision (ACCEPT / PENDING / REJECT)
 
-Uploads a CV (PDF) and returns structured extracted data.
+🏗️ Architecture
 
----
+The AI runs as a FastAPI microservice with the following endpoints:
 
-### 2️⃣ Match Job (ATS Core)
+📌 Endpoints
+POST /api/ai/parse-cv
 
-Uploads:
-- CV (PDF)
-- Job description (text)
+Parses and extracts structured data from a CV file.
 
-Returns:
-- Match Score (0–100)
-- Decision
-- Detailed breakdown
+POST /api/ai/match-job
 
----
+Matches a parsed CV against a job description and returns:
 
-## 🧠 Decision Logic
+match_score (percentage)
 
-The final decision is based on:
+decision (ACCEPT / PENDING / REJECT)
 
-- Semantic similarity
-- Skills matching
-- Title alignment
-- Experience range check
+details
 
----
+raw_score
+
+semantic_score
+
+extracted skills
+
+predicted title
+
+experience level
+
+🧠 AI Components
+
+Sentence Transformers (semantic similarity)
+
+Skill extraction engine
+
+Missing skills detection
+
+Ranking system
+
+Decision threshold logic
+
+🛠️ Tech Stack
+
+Python
+
+FastAPI
+
+PyTorch
+
+Transformers
+
+scikit-learn
+
+spaCy
+
+PDF parsing tools
+
+📊 Decision Logic
+The final hiring decision is based on configurable thresholds:
+
+ACCEPT → High match
+
+PENDING → Medium match
+
+REJECT → Low match
+
+Thresholds can be adjusted in the configuration file.
+
+🎓 Project Context
+This project was developed as a Graduation Project focused on applying AI in recruitment automation and decision support systems.
+
+
 
 ## ▶️ Run Locally
 
@@ -60,3 +95,4 @@ The final decision is based on:
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 http://127.0.0.1:8000/docs
+
