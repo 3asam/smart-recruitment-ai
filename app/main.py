@@ -1,19 +1,51 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from typing import List
 import tempfile
 import shutil
 import os
+import logging
 
 from app.parsing.cv_parser.parser import extract_cv_data
 from app.parsing.adapter import build_cv_text
 from app.parsing.job_adapter import build_job_text
 from app.matching.final_score import calculate_final_score
 from app.matching.ranking import rank_candidates
+from app.core.model_loader import load_model
 
+
+# ==========================================
+# Logging Configuration
+# ==========================================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+# ==========================================
+# FastAPI App Initialization
+# ==========================================
 app = FastAPI(
     title="Smart Recruitment AI Service",
     version="4.0"
 )
+
+
+# ==========================================
+# Startup Event (Load AI Model Once)
+# ==========================================
+@app.on_event("startup")
+def startup_event():
+    logger.info("Starting Smart Recruitment AI service...")
+    load_model()
+    logger.info("AI model loaded at startup.")
+
+
+# ==========================================
+# Health Check Endpoint (Required for Deploy)
+# ==========================================
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 
 # ==========================================
 # 1️⃣ Parse CV Endpoint
@@ -22,16 +54,20 @@ app = FastAPI(
 async def parse_cv_endpoint(
     cv: UploadFile = File(...)
 ):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        shutil.copyfileobj(cv.file, tmp)
-        tmp_path = tmp.name
-
     try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            shutil.copyfileobj(cv.file, tmp)
+            tmp_path = tmp.name
+
         parsed_cv = extract_cv_data(tmp_path)
         return parsed_cv
 
+    except Exception as e:
+        logger.exception("Error while parsing CV")
+        raise HTTPException(status_code=400, detail=str(e))
+
     finally:
-        if os.path.exists(tmp_path):
+        if "tmp_path" in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
@@ -43,11 +79,11 @@ async def match_job_endpoint(
     cv: UploadFile = File(...),
     job_description: str = Form(...)
 ):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        shutil.copyfileobj(cv.file, tmp)
-        tmp_path = tmp.name
-
     try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            shutil.copyfileobj(cv.file, tmp)
+            tmp_path = tmp.name
+
         parsed_cv = extract_cv_data(tmp_path)
         cv_text = build_cv_text(parsed_cv)
 
@@ -66,8 +102,12 @@ async def match_job_endpoint(
 
         return result.to_dict()
 
+    except Exception as e:
+        logger.exception("Error during job matching")
+        raise HTTPException(status_code=400, detail=str(e))
+
     finally:
-        if os.path.exists(tmp_path):
+        if "tmp_path" in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
@@ -81,32 +121,38 @@ async def rank_candidates_endpoint(
 ):
     parsed_cvs = []
 
-    for cv in cvs:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            shutil.copyfileobj(cv.file, tmp)
-            tmp_path = tmp.name
+    try:
+        for cv in cvs:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                shutil.copyfileobj(cv.file, tmp)
+                tmp_path = tmp.name
 
-        try:
-            parsed_cv = extract_cv_data(tmp_path)
-            cv_text = build_cv_text(parsed_cv)
+            try:
+                parsed_cv = extract_cv_data(tmp_path)
+                cv_text = build_cv_text(parsed_cv)
 
-            parsed_cv["cv_text"] = cv_text
-            parsed_cvs.append(parsed_cv)
+                parsed_cv["cv_text"] = cv_text
+                parsed_cvs.append(parsed_cv)
 
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
 
-    job_data = {
-        "description": job_description
-    }
+        job_data = {
+            "description": job_description
+        }
 
-    job_text = build_job_text(job_data)
+        job_text = build_job_text(job_data)
 
-    ranked_results = rank_candidates(
-        parsed_cvs=parsed_cvs,
-        job_text=job_text,
-        job_data=job_data
-    )
+        ranked_results = rank_candidates(
+            parsed_cvs=parsed_cvs,
+            job_text=job_text,
+            job_data=job_data
+        )
 
-    return [result.to_dict() for result in ranked_results]
+        return [result.to_dict() for result in ranked_results]
+
+    except Exception as e:
+        logger.exception("Error during ranking candidates")
+        raise HTTPException(status_code=400, detail=str(e))
+    

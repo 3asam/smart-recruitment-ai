@@ -1,57 +1,64 @@
 """
 model_loader.py
 ----------------
-هذا الملف مسؤول عن تحميل موديل الذكاء الاصطناعي (Sentence-BERT)
-مرة واحدة فقط، وإعادة استخدامه في جميع أجزاء المشروع.
+Responsible for loading the Sentence-BERT model once (Singleton pattern)
+and reusing it across the entire application.
 
-دوره أساسي كبنية تحتية (AI Infrastructure)
-ولا يحتوي على أي منطق Matching أو Business Logic.
+This module contains no business logic.
 """
 
 from sentence_transformers import SentenceTransformer
 import torch
+import logging
 
-# متغير خاص لحفظ نسخة واحدة من الموديل (Singleton)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 _model: SentenceTransformer | None = None
 
 
 def get_device() -> str:
     """
-    تحديد الجهاز المناسب لتشغيل الموديل.
-    - GPU (CUDA) إذا كان متاحًا
-    - CPU كحل بديل
+    Determine best available device.
+    Priority:
+    1. CUDA (if available)
+    2. CPU fallback
     """
-    return "cuda" if torch.cuda.is_available() else "cpu"
+    try:
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+
+    return "cpu"
 
 
 def load_model(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
     """
-    تحميل موديل Sentence-BERT عند أول استدعاء فقط.
-    أي استدعاء لاحق سيعيد نفس النسخة المحمّلة مسبقًا.
-
-    Parameters:
-        model_name (str): اسم الموديل من sentence-transformers
-
-    Returns:
-        SentenceTransformer: نسخة جاهزة للاستخدام من الموديل
+    Load SentenceTransformer model once (Singleton).
     """
     global _model
 
     if _model is None:
         device = get_device()
-        print(f"[model_loader] Loading model '{model_name}' on {device}...")
+        logger.info(f"[model_loader] Loading model '{model_name}' on {device}...")
 
-        _model = SentenceTransformer(
-            model_name,
-            device=device
-        )
+        try:
+            _model = SentenceTransformer(
+                model_name,
+                device=device
+            )
+            logger.info("[model_loader] Model loaded successfully")
 
-        print("[model_loader] Model loaded successfully")
+        except Exception as e:
+            logger.exception("[model_loader] Failed to load model")
+            raise e
 
     return _model
 
 
-# يسمح بتشغيل الملف مباشرة لاختبار التحميل فقط
+# Standalone test
 if __name__ == "__main__":
     model = load_model()
     embedding = model.encode(
@@ -59,3 +66,4 @@ if __name__ == "__main__":
         convert_to_tensor=True
     )
     print("Test embedding shape:", embedding.shape)
+    
