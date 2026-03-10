@@ -8,6 +8,8 @@ import logging
 from app.parsing.cv_parser.parser import extract_cv_data
 from app.parsing.adapter import build_cv_text
 from app.parsing.job_adapter import build_job_text
+from app.parsing.job_parser import parse_job_description
+
 from app.matching.final_score import calculate_final_score
 from app.matching.ranking import rank_candidates
 from app.core.model_loader import load_model
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 # ==========================================
 app = FastAPI(
     title="Smart Recruitment AI Service",
-    version="4.0"
+    version="4.2"
 )
 
 
@@ -40,7 +42,7 @@ def startup_event():
 
 
 # ==========================================
-# Health Check Endpoint (Required for Deploy)
+# Health Check Endpoint
 # ==========================================
 @app.get("/health")
 def health():
@@ -48,31 +50,35 @@ def health():
 
 
 # ==========================================
-# 1️⃣ Parse CV Endpoint
+# Parse CV Endpoint
 # ==========================================
 @app.post("/api/ai/parse-cv")
 async def parse_cv_endpoint(
     cv: UploadFile = File(...)
 ):
     try:
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             shutil.copyfileobj(cv.file, tmp)
             tmp_path = tmp.name
 
         parsed_cv = extract_cv_data(tmp_path)
+
         return parsed_cv
 
     except Exception as e:
+
         logger.exception("Error while parsing CV")
         raise HTTPException(status_code=400, detail=str(e))
 
     finally:
+
         if "tmp_path" in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
 # ==========================================
-# 2️⃣ Match Job Endpoint (Single Candidate)
+# Match Job Endpoint (Single Candidate)
 # ==========================================
 @app.post("/api/ai/match-job")
 async def match_job_endpoint(
@@ -80,19 +86,25 @@ async def match_job_endpoint(
     job_description: str = Form(...)
 ):
     try:
+
+        # حفظ CV مؤقت
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             shutil.copyfileobj(cv.file, tmp)
             tmp_path = tmp.name
 
+        # استخراج بيانات CV
         parsed_cv = extract_cv_data(tmp_path)
+
+        # تحويل CV إلى نص للـ semantic model
         cv_text = build_cv_text(parsed_cv)
 
-        job_data = {
-            "description": job_description
-        }
+        # استخراج بيانات الوظيفة من النص
+        job_data = parse_job_description(job_description)
 
+        # بناء النص الخاص بالوظيفة
         job_text = build_job_text(job_data)
 
+        # حساب السكور النهائي
         result = calculate_final_score(
             cv_text=cv_text,
             job_text=job_text,
@@ -103,16 +115,18 @@ async def match_job_endpoint(
         return result.to_dict()
 
     except Exception as e:
+
         logger.exception("Error during job matching")
         raise HTTPException(status_code=400, detail=str(e))
 
     finally:
+
         if "tmp_path" in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
 # ==========================================
-# 3️⃣ Rank Multiple Candidates
+# Rank Multiple Candidates
 # ==========================================
 @app.post("/api/ai/rank-candidates")
 async def rank_candidates_endpoint(
@@ -122,25 +136,30 @@ async def rank_candidates_endpoint(
     parsed_cvs = []
 
     try:
+
         for cv in cvs:
+
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 shutil.copyfileobj(cv.file, tmp)
                 tmp_path = tmp.name
 
             try:
+
                 parsed_cv = extract_cv_data(tmp_path)
+
                 cv_text = build_cv_text(parsed_cv)
 
                 parsed_cv["cv_text"] = cv_text
+
                 parsed_cvs.append(parsed_cv)
 
             finally:
+
                 if os.path.exists(tmp_path):
                     os.remove(tmp_path)
 
-        job_data = {
-            "description": job_description
-        }
+        # تحليل الـ Job Description
+        job_data = parse_job_description(job_description)
 
         job_text = build_job_text(job_data)
 
@@ -153,6 +172,8 @@ async def rank_candidates_endpoint(
         return [result.to_dict() for result in ranked_results]
 
     except Exception as e:
+
         logger.exception("Error during ranking candidates")
         raise HTTPException(status_code=400, detail=str(e))
+    
     

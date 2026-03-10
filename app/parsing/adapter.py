@@ -1,29 +1,21 @@
-def build_cv_text(parsed_cv: dict) -> str:
-    sections = []
+def build_cv_text(parsed_cv: dict):
 
-    if parsed_cv.get("summary"):
-        sections.append(parsed_cv["summary"])
+    sections=[]
+
+    if parsed_cv.get("name"):
+
+        sections.append(f"Candidate Name: {parsed_cv['name']}")
 
     if parsed_cv.get("skills"):
-        sections.append("Skills: " + ", ".join(parsed_cv["skills"]))
+
+        sections.append("Candidate Skills: "+", ".join(parsed_cv["skills"]))
 
     if parsed_cv.get("experience"):
-        for exp in parsed_cv["experience"]:
-            if isinstance(exp, dict):
-                sections.append(
-                    f"{exp.get('title', '')} at {exp.get('company', '')}. "
-                    f"{exp.get('description', '')}"
-                )
-            else:
-                sections.append(str(exp))
+
+        sections.append(f"Total Experience: {parsed_cv['experience']} years")
 
     if parsed_cv.get("education"):
-        for edu in parsed_cv["education"]:
-            if isinstance(edu, dict):
-                sections.append(
-                    f"{edu.get('degree', '')} - {edu.get('institution', '')}"
-                )
-            else:
-                sections.append(str(edu))
+
+        sections.append(f"Education: {parsed_cv['education']}")
 
     return "\n".join(sections)
