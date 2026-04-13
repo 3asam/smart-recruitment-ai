@@ -87,24 +87,17 @@ async def match_job_endpoint(
 ):
     try:
 
-        # حفظ CV مؤقت
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             shutil.copyfileobj(cv.file, tmp)
             tmp_path = tmp.name
 
-        # استخراج بيانات CV
         parsed_cv = extract_cv_data(tmp_path)
 
-        # تحويل CV إلى نص للـ semantic model
         cv_text = build_cv_text(parsed_cv)
 
-        # استخراج بيانات الوظيفة من النص
         job_data = parse_job_description(job_description)
-
-        # بناء النص الخاص بالوظيفة
         job_text = build_job_text(job_data)
 
-        # حساب السكور النهائي
         result = calculate_final_score(
             cv_text=cv_text,
             job_text=job_text,
@@ -149,7 +142,11 @@ async def rank_candidates_endpoint(
 
                 cv_text = build_cv_text(parsed_cv)
 
+                # ✅ التعديل هنا: استخراج cv_id من اسم الملف
+                cv_id = cv.filename.replace(".pdf", "")
+
                 parsed_cv["cv_text"] = cv_text
+                parsed_cv["cv_id"] = cv_id  # ✅ ربط الـ ID
 
                 parsed_cvs.append(parsed_cv)
 
@@ -158,9 +155,7 @@ async def rank_candidates_endpoint(
                 if os.path.exists(tmp_path):
                     os.remove(tmp_path)
 
-        # تحليل الـ Job Description
         job_data = parse_job_description(job_description)
-
         job_text = build_job_text(job_data)
 
         ranked_results = rank_candidates(
@@ -169,11 +164,11 @@ async def rank_candidates_endpoint(
             job_data=job_data
         )
 
+        # ✅ مفيش تعديل هنا لأن to_dict بقى بيرجع cv_id
         return [result.to_dict() for result in ranked_results]
 
     except Exception as e:
 
         logger.exception("Error during ranking candidates")
         raise HTTPException(status_code=400, detail=str(e))
-    
     

@@ -1,4 +1,4 @@
-from typing import Dict,List
+from typing import Dict, List
 from app.matching.semantic import semantic_sentence_matching
 from app.matching.skills import match_skills
 from app.matching.title import match_title
@@ -10,13 +10,26 @@ from app.config.thresholds import DECISION_THRESHOLDS
 
 class FinalMatchResult:
 
-    def __init__(self,final_score,decision,semantic_score,semantic_explainability,skills,title,experience,explanation):
+    def __init__(
+        self,
+        final_score,
+        decision,
+        semantic_score,
+        semantic_explainability,
+        skills,
+        title,
+        experience,
+        explanation,
+        cv_id=None  # ✅ إضافة بسيطة
+    ):
 
-        self.raw_score = round(final_score*100,2)
+        self.cv_id = cv_id  # ✅
+
+        self.raw_score = round(final_score * 100, 2)
 
         self.match_score = self.raw_score
 
-        self.semantic_score = round(semantic_score*100,2)
+        self.semantic_score = round(semantic_score * 100, 2)
 
         self.semantic_explainability = semantic_explainability
 
@@ -35,51 +48,69 @@ class FinalMatchResult:
 
         return {
 
+            "cv_id": self.cv_id,  # ✅ رجعناه في response
+
             "match_score": self.match_score,
 
             "decision": self.decision,
 
             "skills":{
 
-                "matched":self.skills.matched_skills,
+                "matched": self.skills.matched_skills,
 
-                "missing":self.skills.missing_skills
+                "missing": self.skills.missing_skills
 
             },
 
-            "explanation":self.explanation,
+            "explanation": self.explanation,
 
             "details":{
 
-                "raw_score":self.raw_score,
+                "raw_score": self.raw_score,
 
-                "semantic_score":self.semantic_score,
+                "semantic_score": self.semantic_score,
 
-                "semantic_explainability":self.semantic_explainability,
+                "semantic_explainability": self.semantic_explainability,
 
-                "skills":self.skills.to_dict(),
+                "skills": self.skills.to_dict(),
 
-                "title":self.title.to_dict(),
+                "title": self.title.to_dict(),
 
-                "experience":self.experience.to_dict()
+                "experience": self.experience.to_dict()
 
             }
         }
 
 
-def calculate_final_score(cv_text,job_text,job_data,parsed_cv):
+def calculate_final_score(
+    cv_text,
+    job_text,
+    job_data,
+    parsed_cv,
+    cv_id=None  # ✅ إضافة
+):
 
-    semantic_result = semantic_sentence_matching(cv_text,job_text,top_k=3)
+    semantic_result = semantic_sentence_matching(cv_text, job_text, top_k=3)
 
     semantic_score = semantic_result["score"]
 
     semantic_explainability = semantic_result["top_matches"]
 
-    skills_result = match_skills(parsed_cv.get("skills",[]),job_data.get("skills",[]))
+    skills_result = match_skills(
+        parsed_cv.get("skills", []),
+        job_data.get("skills", [])
+    )
 
-    title_result = match_title(parsed_cv.get("title",""),job_data.get("title",""))
+    title_result = match_title(
+        parsed_cv.get("title", ""),
+        job_data.get("title", "")
+    )
 
-    experience_result = match_experience(parsed_cv.get("experience",0),job_data.get("min_years_experience",0),job_data.get("max_years_experience"))
+    experience_result = match_experience(
+        parsed_cv.get("experience", 0),
+        job_data.get("min_years_experience", 0),
+        job_data.get("max_years_experience")
+    )
 
     final_score = (
 
@@ -95,19 +126,19 @@ def calculate_final_score(cv_text,job_text,job_data,parsed_cv):
 
     if final_score >= DECISION_THRESHOLDS["accept"]:
 
-        decision="ACCEPT"
+        decision = "ACCEPT"
 
     elif final_score >= DECISION_THRESHOLDS["pending"]:
 
-        decision="PENDING"
+        decision = "PENDING"
 
     else:
 
-        decision="REJECT"
+        decision = "REJECT"
 
     explanation = generate_explanation(
 
-        match_score=final_score*100,
+        match_score=final_score * 100,
 
         decision=decision,
 
@@ -131,6 +162,7 @@ def calculate_final_score(cv_text,job_text,job_data,parsed_cv):
 
         experience_result,
 
-        explanation
+        explanation,
 
+        cv_id=cv_id  # ✅ التعديل الأساسي هنا
     )
