@@ -20,82 +20,80 @@ class FinalMatchResult:
         title,
         experience,
         explanation,
-        cv_id=None  # ✅ إضافة بسيطة
+        cv_id=None
     ):
 
-        self.cv_id = cv_id  # ✅
+        # ===============================
+        # Identity
+        # ===============================
+        self.cv_id = cv_id
 
+        # ===============================
+        # Scores
+        # ===============================
         self.raw_score = round(final_score * 100, 2)
-
         self.match_score = self.raw_score
-
         self.semantic_score = round(semantic_score * 100, 2)
 
+        # ===============================
+        # Details
+        # ===============================
         self.semantic_explainability = semantic_explainability
-
         self.decision = decision
-
         self.skills = skills
-
         self.title = title
-
         self.experience = experience
-
         self.explanation = explanation
-
 
     def to_dict(self):
 
         return {
-
-            "cv_id": self.cv_id,  # ✅ رجعناه في response
+            "cv_id": self.cv_id,
 
             "match_score": self.match_score,
-
             "decision": self.decision,
 
-            "skills":{
-
+            "skills": {
                 "matched": self.skills.matched_skills,
-
                 "missing": self.skills.missing_skills
-
             },
 
             "explanation": self.explanation,
 
-            "details":{
-
+            "details": {
                 "raw_score": self.raw_score,
-
                 "semantic_score": self.semantic_score,
-
                 "semantic_explainability": self.semantic_explainability,
-
                 "skills": self.skills.to_dict(),
-
                 "title": self.title.to_dict(),
-
                 "experience": self.experience.to_dict()
-
             }
         }
 
 
 def calculate_final_score(
-    cv_text,
-    job_text,
-    job_data,
-    parsed_cv,
-    cv_id=None  # ✅ إضافة
+    cv_text: str,
+    job_text: str,
+    job_data: Dict,
+    parsed_cv: Dict,
+    cv_id: str = None
 ):
 
-    semantic_result = semantic_sentence_matching(cv_text, job_text, top_k=3)
+    # ===============================
+    # Semantic Matching
+    # ===============================
+    semantic_result = semantic_sentence_matching(
+        cv_text,
+        job_text,
+        top_k=3
+    )
 
     semantic_score = semantic_result["score"]
-
     semantic_explainability = semantic_result["top_matches"]
 
+    # ===============================
+    # Rule-based Matching
+    # ===============================
     skills_result = match_skills(
         parsed_cv.get("skills", []),
         job_data.get("skills", [])
@@ -112,57 +110,46 @@ def calculate_final_score(
         job_data.get("max_years_experience")
     )
 
+    # ===============================
+    # Final Score Calculation
+    # ===============================
     final_score = (
-
         semantic_score * SCORE_WEIGHTS["semantic"] +
-
         skills_result.score * SCORE_WEIGHTS["skills"] +
-
         title_result.score * SCORE_WEIGHTS["title"] +
-
         experience_result.score * SCORE_WEIGHTS["experience"]
-
     )
 
+    # ===============================
+    # Decision Logic
+    # ===============================
     if final_score >= DECISION_THRESHOLDS["accept"]:
-
         decision = "ACCEPT"
-
     elif final_score >= DECISION_THRESHOLDS["pending"]:
-
         decision = "PENDING"
-
     else:
-
         decision = "REJECT"
 
+    # ===============================
+    # Explanation
+    # ===============================
     explanation = generate_explanation(
-
         match_score=final_score * 100,
-
         decision=decision,
-
         missing_skills=skills_result.missing_skills
-
     )
 
+    # ===============================
+    # Return Result
+    # ===============================
     return FinalMatchResult(
-
         final_score,
-
         decision,
-
         semantic_score,
-
         semantic_explainability,
-
         skills_result,
-
         title_result,
-
         experience_result,
-
         explanation,
-
-        cv_id=cv_id  # ✅ التعديل الأساسي هنا
+        cv_id=cv_id  # ✅ مهم جدًا للـ ranking
     )

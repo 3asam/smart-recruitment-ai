@@ -1,145 +1,65 @@
-Smart Recruitment AI
+# 🚀 Smart Recruitment AI System
 
-AI-powered Applicant Tracking System (ATS) microservice built with FastAPI.
+AI-powered recruitment system that analyzes CVs and ranks candidates based on job descriptions.
 
-Overview
+---
 
-Smart Recruitment AI is an intelligent recruitment microservice designed to automate:
+## 📌 Overview
+This system helps HR teams automatically evaluate and rank candidates using Artificial Intelligence.
 
-CV parsing and structured data extraction
+It processes CVs, compares them with job requirements, and returns a ranked list with explanations.
 
-Candidate–job semantic matching
+---
 
-Match scoring (0–100%)
+## 🧠 System Architecture
 
-Hiring decision support (ACCEPT / PENDING / REJECT)
+![Architecture](docs/architecture.png)
 
-Candidate ranking based on job fit
+---
 
-The system is built as a modular, production-ready FastAPI service.
+## 🔄 Workflow
 
-Architecture
-
-The system follows a layered architecture:
-
-API Layer (FastAPI endpoints)
-
-AI & Matching Engine
-
-Scoring & Decision Logic
-
-Parsing & Skill Extraction Modules
-
-API Endpoints
-POST /api/ai/parse-cv
-
-Extracts structured information from a CV.
-
-POST /api/ai/match-job
-
-Matches a candidate against a job description and returns:
-
-match_score (percentage)
-
-decision (ACCEPT / PENDING / REJECT)
-
-raw_score
-
-semantic_score
-
-missing_skills
-
-extracted skills
-
-experience evaluation
-
-POST /api/ai/rank-candidates
-
-Ranks multiple candidates against a job description based on match score.
-
-AI Components
-
-Semantic similarity using Sentence Transformers
-
-Skill extraction and normalization
-
-Experience alignment logic
-
-Missing skills detection
-
-Configurable decision thresholds
-
-Technology Stack
-
-Python
-
-FastAPI
-
-PyTorch
-
-Transformers
-
-scikit-learn
-
-spaCy
-
-PDF parsing tools
+1. HR uploads CVs
+2. Backend assigns cv_id for each CV
+3. Backend sends CVs + job description to AI service
+4. AI parses CVs
+5. AI calculates match score
+6. AI ranks candidates
 
 
+---
 
-🔄 Request Flow
+## ⚙️ Tech Stack
 
-Client sends CV and Job Description.
+- Python (FastAPI)
+- Sentence Transformers (NLP)
+- Docker
+- REST API
 
-CV is parsed into structured data.
 
-Embeddings are generated for semantic comparison.
+---
 
-Skill and experience alignment is calculated.
+## 🔥 Features
 
-A weighted scoring algorithm computes the final score.
+- CV Parsing (Skills, Experience, Title)
+- Semantic Matching (AI-based)
+- Candidate Ranking System
+- Explainable AI (why accepted/rejected)
 
-Decision thresholds determine ACCEPT / PENDING / REJECT.
 
-Structured response is returned.
+---
 
-🧠 AI Processing Pipeline
-Raw CV
-   ↓
-Text Extraction
-   ↓
-Skill Extraction
-   ↓
-Embedding Generation (Sentence Transformers)
-   ↓
-Semantic Similarity Calculation
-   ↓
-Skill Overlap Scoring
-   ↓
-Experience Validation
-   ↓
-Weighted Final Score
-   ↓
-Decision Logic
 
-🎯 Design Principles
+🚀 Run Locally
 
-Separation of Concerns (API vs AI logic)
-
-Modular architecture for scalability
-
-Extensible scoring pipeline
-
-Microservice-ready deployment
-
-Configurable decision thresholds
-
-## ▶️ Run Locally
-
-```bash
-pip install -r requirements.txt
 uvicorn app.main:app --reload
-http://127.0.0.1:8000/docs
 
+🐳 Run with Docker
 
+docker build -t smart-recruitment-ai
+docker run -p 8000:8000 smart-recruitment-ai
 
+📡 API Endpoints
+POST /api/ai/parse-cv
+POST /api/ai/match-job
+POST /api/ai/rank-candidates
