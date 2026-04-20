@@ -11,11 +11,6 @@ It processes CVs, compares them with job requirements, and returns a ranked list
 
 ---
 
-## 🧠 System Architecture
-
-![Architecture](docs/architecture.png)
-
----
 
 ## 🔄 Workflow
 
