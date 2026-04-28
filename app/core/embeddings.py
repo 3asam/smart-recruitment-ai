@@ -1,13 +1,3 @@
-"""
-embeddings.py
--------------
-هذا الملف مسؤول عن تحويل أي نص (CV / JD / Skills / Title ...)
-إلى Embedding Vector باستخدام موديل SBERT المحمّل من model_loader.
-
-⚠️ لا يحتوي على أي منطق Matching أو Scoring
-⚠️ مجرد طبقة وسيطة بين النص والموديل
-"""
-
 from typing import List, Union, Tuple
 import re
 import torch
@@ -18,19 +8,10 @@ from app.core.model_loader import load_model
 TextInput = Union[str, List[str]]
 
 
+# ==========================================
+# 🔥 FIXED: Always return 2D embeddings
+# ==========================================
 def get_embedding(text: TextInput, normalize: bool = True) -> torch.Tensor:
-    """
-    تحويل نص واحد أو قائمة نصوص إلى Embedding.
-
-    Parameters:
-        text (str | List[str]): النص أو النصوص المطلوب تحويلها
-        normalize (bool): هل يتم عمل L2 normalization (مهم لـ cosine similarity)
-
-    Returns:
-        torch.Tensor:
-            - shape (384,) لنص واحد
-            - shape (N, 384) لقائمة نصوص
-    """
 
     model = load_model()
 
@@ -40,44 +21,28 @@ def get_embedding(text: TextInput, normalize: bool = True) -> torch.Tensor:
         normalize_embeddings=normalize
     )
 
+    # 🔥 الحل الأساسي
+    if embedding.dim() == 1:
+        embedding = embedding.unsqueeze(0)
+
     return embedding
 
 
+# ==========================================
+# Mean Pooling
+# ==========================================
 def mean_pool_embeddings(texts: List[str]) -> torch.Tensor:
-    """
-    حساب embedding متوسط لمجموعة نصوص.
-    مفيد في:
-    - Skills متعددة
-    - Responsibilities متعددة
-
-    Example:
-        ["Python", "Django", "REST APIs"]
-        → Embedding واحد يمثلهم
-    """
 
     embeddings = get_embedding(texts)
-
-    if embeddings.dim() == 1:
-        return embeddings
 
     return embeddings.mean(dim=0)
 
 
-# ------------------------------------------------------------------
-# Sentence-level preparation (for Semantic Explainability)
-# ------------------------------------------------------------------
-
+# ==========================================
+# Sentence Splitting
+# ==========================================
 def split_into_sentences(text: str, min_length: int = 20) -> List[str]:
-    """
-    تقسيم النص إلى جمل صالحة للاستخدام في التحليل الدلالي.
 
-    Parameters:
-        text (str): النص الكامل (CV أو JD)
-        min_length (int): أقل طول للجملة المقبولة
-
-    Returns:
-        List[str]: قائمة جمل نظيفة
-    """
     if not text:
         return []
 
@@ -90,27 +55,18 @@ def split_into_sentences(text: str, min_length: int = 20) -> List[str]:
     ]
 
 
+# ==========================================
+# Sentence Embeddings
+# ==========================================
 def get_sentence_embeddings(
     text: str,
     normalize: bool = True
 ) -> Tuple[List[str], torch.Tensor]:
-    """
-    تحويل نص كامل إلى:
-    - قائمة جمل
-    - Embedding لكل جملة
-
-    ⚠️ لا يحتوي على أي similarity أو matching logic
-
-    Returns:
-        Tuple:
-            - List[str]: الجمل
-            - torch.Tensor: embeddings (N, 384)
-    """
 
     sentences = split_into_sentences(text)
 
     if not sentences:
-        return [], torch.empty(0)
+        return [], torch.empty((0, 384))
 
     embeddings = get_embedding(sentences, normalize=normalize)
 

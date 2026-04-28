@@ -4,32 +4,18 @@ from typing import Dict, List, Optional
 
 
 # --------------------------------
-# Known Skills List
+# Skills List
 # --------------------------------
 
 SKILLS_LIST = [
-    "python",
-    "java",
-    "c++",
-    "sql",
-    "javascript",
-    "machine learning",
-    "deep learning",
-    "nlp",
-    "pandas",
-    "numpy",
-    "react",
-    "next.js",
-    "node.js",
-    "c#",
-    "mongodb",
-    "tailwind",
-    "html",
-    "css",
-    "git",
-    "rest apis",
-    "api",
-    "docker"
+    "python", "java", "c++", "sql", "javascript",
+    "machine learning", "deep learning", "nlp",
+    "pandas", "numpy", "react", "next.js",
+    "node.js", "c#", "mongodb", "tailwind",
+    "html", "css", "git", "rest apis", "api", "docker",
+
+    # Data
+    "excel", "power bi", "tableau"
 ]
 
 
@@ -40,13 +26,13 @@ SKILLS_LIST = [
 def extract_cv_data(file_path: str) -> Dict:
 
     text = _extract_text_from_pdf(file_path)
-
     cleaned_text = _clean_text(text)
 
     return {
         "name": _extract_name(text),
-        "email": _extract_email(cleaned_text),
-        "phone": _extract_phone(cleaned_text),
+        "title": _extract_title(text),  # 🔥 FIXED
+        "email": _extract_email(text),
+        "phone": _extract_phone(text),
         "skills": _extract_skills(cleaned_text),
         "experience": _extract_experience(cleaned_text),
         "education": _extract_education(cleaned_text)
@@ -64,11 +50,9 @@ def _extract_text_from_pdf(file_path: str) -> str:
     with pdfplumber.open(file_path) as pdf:
 
         for page in pdf.pages:
-
             page_text = page.extract_text()
 
             if page_text:
-
                 content += page_text + "\n"
 
     return content
@@ -81,10 +65,31 @@ def _extract_text_from_pdf(file_path: str) -> str:
 def _clean_text(text: str) -> str:
 
     text = text.lower()
-
     text = re.sub(r"\s+", " ", text)
 
     return text.strip()
+
+
+# --------------------------------
+# Normalize Email Text
+# --------------------------------
+
+def _normalize_email_text(text: str) -> str:
+
+    if not text:
+        return text
+
+    t = text
+
+    t = re.sub(r"\s*\(?\[?\s*at\s*\]?\)?\s*", "@", t, flags=re.IGNORECASE)
+    t = re.sub(r"\s*\(?\[?\s*dot\s*\]?\)?\s*", ".", t, flags=re.IGNORECASE)
+
+    t = re.sub(r"\s*@\s*", "@", t)
+    t = re.sub(r"\s*\.\s*", ".", t)
+
+    t = t.replace("\n", " ")
+
+    return t
 
 
 # --------------------------------
@@ -93,9 +98,22 @@ def _clean_text(text: str) -> str:
 
 def _extract_email(text: str) -> Optional[str]:
 
-    match = re.search(r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}", text)
+    if not text:
+        return None
 
-    return match.group(0) if match else None
+    pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+    match = re.search(pattern, text)
+    if match:
+        return match.group(0).strip().lower()
+
+    normalized = _normalize_email_text(text)
+
+    match = re.search(pattern, normalized)
+    if match:
+        return match.group(0).strip().lower()
+
+    return None
 
 
 # --------------------------------
@@ -105,11 +123,14 @@ def _extract_email(text: str) -> Optional[str]:
 def _extract_phone(text: str) -> Optional[str]:
 
     match = re.search(
-        r"(\+?\d{1,3})?[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}",
+        r"(\+?\d{1,3})?[\s\-]?\(?\d{3,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}",
         text
     )
 
-    return match.group(0) if match else None
+    if match:
+        return match.group(0).strip()
+
+    return None
 
 
 # --------------------------------
@@ -125,12 +146,55 @@ def _extract_name(text: str) -> Optional[str]:
         candidate = line.strip()
 
         if 2 <= len(candidate.split()) <= 4:
-
             if not any(char.isdigit() for char in candidate):
-
                 return candidate.title()
 
     return None
+
+
+# --------------------------------
+# 🔥 Extract Title (FIXED)
+# --------------------------------
+
+def _extract_title(text: str) -> str:
+
+    text_lower = text.lower()
+
+    COMMON_TITLES = [
+        "data analyst",
+        "data scientist",
+        "data engineer",
+        "backend developer",
+        "frontend developer",
+        "full stack developer",
+        "software engineer",
+        "machine learning engineer",
+        "ai engineer",
+        "power bi developer",
+        "business analyst"
+    ]
+
+    # 1️⃣ direct match
+    for title in COMMON_TITLES:
+        if title in text_lower:
+            return title.title()
+
+    # 2️⃣ fallback scanning
+    lines = text.split("\n")
+
+    for line in lines[:10]:
+
+        clean = line.strip()
+
+        if not clean:
+            continue
+
+        if any(word in clean.lower() for word in [
+            "developer", "engineer", "analyst", "scientist"
+        ]):
+            return clean.title()
+
+    return ""
 
 
 # --------------------------------
@@ -146,7 +210,6 @@ def _extract_skills(text: str) -> List[str]:
         pattern = r"\b" + re.escape(skill) + r"\b"
 
         if re.search(pattern, text):
-
             found.append(skill)
 
     return sorted(list(set(found)))
@@ -167,15 +230,12 @@ def _extract_experience(text: str) -> int:
     years = []
 
     for pattern in patterns:
-
         matches = re.findall(pattern, text)
 
         for match in matches:
-
             years.append(int(match))
 
     if years:
-
         return max(years)
 
     return 0
@@ -190,13 +250,8 @@ def _extract_education(text: str) -> Optional[str]:
     text = text.lower()
 
     degree_keywords = [
-        "bachelor",
-        "b.sc",
-        "bsc",
-        "master",
-        "msc",
-        "phd",
-        "doctorate"
+        "bachelor", "b.sc", "bsc",
+        "master", "msc", "phd", "doctorate"
     ]
 
     field_keywords = [
@@ -211,7 +266,6 @@ def _extract_education(text: str) -> Optional[str]:
         "computers and information"
     ]
 
-    # search for degree + field
     for degree in degree_keywords:
 
         if degree in text:
@@ -219,21 +273,16 @@ def _extract_education(text: str) -> Optional[str]:
             for field in field_keywords:
 
                 if field in text:
-
                     return f"{degree.title()} in {field.title()}"
 
             return degree.title()
 
-    # search for field only
     for field in field_keywords:
 
         if field in text:
-
             return field.title()
 
-    # fallback if university detected
     if "faculty" in text or "university" in text:
-
         return "University Degree"
 
     return None

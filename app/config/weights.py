@@ -1,17 +1,17 @@
 """
 weights.py
 -----------
-أوزان مكونات المطابقة في نظام Smart Recruitment AI.
-
-يمكن تعديل هذه القيم حسب:
-- طبيعة الوظيفة
-- سياسة الشركة
-- نتائج التجارب
+Dynamic & realistic scoring weights
+for Smart Recruitment AI.
 """
 
+# ==========================================
+# 🔥 Default Weights (Balanced)
+# ==========================================
+
 SCORE_WEIGHTS = {
-    "semantic": 0.4,
-    "skills": 0.3,
-    "title": 0.2,
-    "experience": 0.1
+    "skills": 0.4,        # 🔥 الأهم
+    "semantic": 0.3,      # مساعد
+    "title": 0.2,         # مهم لتحديد role
+    "experience": 0.1     # ضبط نهائي
 }

@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 import logging
+import uuid
 
 from app.parsing.cv_parser.parser import extract_cv_data
 from app.parsing.adapter import build_cv_text
@@ -16,29 +17,29 @@ from app.core.model_loader import load_model
 
 
 # ==========================================
-# Logging Configuration
+# Logging
 # ==========================================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 # ==========================================
-# FastAPI App Initialization
+# App Init
 # ==========================================
 app = FastAPI(
     title="Smart Recruitment AI Service",
-    version="7.0"
+    version="10.0"
 )
 
 
 # ==========================================
-# Startup Event
+# Startup
 # ==========================================
 @app.on_event("startup")
 def startup_event():
     logger.info("Starting Smart Recruitment AI service...")
     load_model()
-    logger.info("AI model loaded at startup.")
+    logger.info("AI model loaded.")
 
 
 # ==========================================
@@ -54,14 +55,9 @@ def health():
 # ==========================================
 @app.post("/api/ai/parse-cv")
 async def parse_cv_endpoint(
-    cv: UploadFile = File(...),
-    cv_id: str = Form(...)
+    cv: UploadFile = File(...)
 ):
     try:
-
-        if not cv_id:
-            raise HTTPException(status_code=400, detail="cv_id is required")
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             shutil.copyfileobj(cv.file, tmp)
             tmp_path = tmp.name
@@ -69,12 +65,11 @@ async def parse_cv_endpoint(
         parsed_cv = extract_cv_data(tmp_path)
 
         return {
-            "cv_id": cv_id,
             "data": parsed_cv
         }
 
     except Exception as e:
-        logger.exception("Error while parsing CV")
+        logger.exception("Error parsing CV")
         raise HTTPException(status_code=400, detail=str(e))
 
     finally:
@@ -83,19 +78,14 @@ async def parse_cv_endpoint(
 
 
 # ==========================================
-# Match Job (Single)
+# Match Single CV
 # ==========================================
 @app.post("/api/ai/match-job")
 async def match_job_endpoint(
     cv: UploadFile = File(...),
-    cv_id: str = Form(...),
     job_description: str = Form(...)
 ):
     try:
-
-        if not cv_id:
-            raise HTTPException(status_code=400, detail="cv_id is required")
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             shutil.copyfileobj(cv.file, tmp)
             tmp_path = tmp.name
@@ -105,6 +95,9 @@ async def match_job_endpoint(
 
         job_data = parse_job_description(job_description)
         job_text = build_job_text(job_data)
+
+        # 🔥 Generate CV ID
+        cv_id = f"CV-{str(uuid.uuid4())[:8].upper()}"
 
         result = calculate_final_score(
             cv_text=cv_text,
@@ -117,7 +110,7 @@ async def match_job_endpoint(
         return result.to_dict()
 
     except Exception as e:
-        logger.exception("Error during job matching")
+        logger.exception("Error matching job")
         raise HTTPException(status_code=400, detail=str(e))
 
     finally:
@@ -126,32 +119,17 @@ async def match_job_endpoint(
 
 
 # ==========================================
-# Rank Candidates (FIXED FOR SWAGGER 🔥)
+# Rank Multiple Candidates
 # ==========================================
 @app.post("/api/ai/rank-candidates")
 async def rank_candidates_endpoint(
     cvs: List[UploadFile] = File(...),
-    cv_ids: str = Form(...),  # ✅ string بدل list
     job_description: str = Form(...)
 ):
     parsed_cvs = []
 
     try:
-
-        # ✅ نحول string → list
-        cv_ids_list = [id.strip() for id in cv_ids.split(",")]
-
-        # ✅ validation
-        if len(cvs) != len(cv_ids_list):
-            raise HTTPException(
-                status_code=400,
-                detail="Mismatch between number of cvs and cv_ids"
-            )
-
-        for cv, cv_id in zip(cvs, cv_ids_list):
-
-            if not cv_id:
-                raise HTTPException(status_code=400, detail="cv_id is required")
+        for cv in cvs:
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 shutil.copyfileobj(cv.file, tmp)
@@ -161,8 +139,11 @@ async def rank_candidates_endpoint(
                 parsed_cv = extract_cv_data(tmp_path)
                 cv_text = build_cv_text(parsed_cv)
 
+                # 🔥 Generate cv_id لكل CV
+                cv_id = f"CV-{str(uuid.uuid4())[:8].upper()}"
+
                 parsed_cv["cv_text"] = cv_text
-                parsed_cv["cv_id"] = cv_id
+                parsed_cv["cv_id"] = cv_id   # 🔥 الحل الأساسي
 
                 parsed_cvs.append(parsed_cv)
 
@@ -179,43 +160,25 @@ async def rank_candidates_endpoint(
             job_data=job_data
         )
 
-        # ✅ add rank
-        response = []
-
-        for index, result in enumerate(ranked_results, start=1):
-            data = result.to_dict()
-            data["rank"] = index
-            response.append(data)
-
-        return response
+        return [result.to_dict() for result in ranked_results]
 
     except Exception as e:
-        logger.exception("Error during ranking candidates")
+        logger.exception("Error ranking candidates")
         raise HTTPException(status_code=400, detail=str(e))
 
 
 # ==========================================
-# Simple Ranking
+# Simple Ranking (Light Response)
 # ==========================================
 @app.post("/api/ai/rank-simple")
 async def rank_simple_endpoint(
     cvs: List[UploadFile] = File(...),
-    cv_ids: str = Form(...),
     job_description: str = Form(...)
 ):
     parsed_cvs = []
 
     try:
-
-        cv_ids_list = [id.strip() for id in cv_ids.split(",")]
-
-        if len(cvs) != len(cv_ids_list):
-            raise HTTPException(
-                status_code=400,
-                detail="Mismatch between number of cvs and cv_ids"
-            )
-
-        for cv, cv_id in zip(cvs, cv_ids_list):
+        for cv in cvs:
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 shutil.copyfileobj(cv.file, tmp)
@@ -224,6 +187,8 @@ async def rank_simple_endpoint(
             try:
                 parsed_cv = extract_cv_data(tmp_path)
                 cv_text = build_cv_text(parsed_cv)
+
+                cv_id = f"CV-{str(uuid.uuid4())[:8].upper()}"
 
                 parsed_cv["cv_text"] = cv_text
                 parsed_cv["cv_id"] = cv_id
@@ -256,4 +221,5 @@ async def rank_simple_endpoint(
     except Exception as e:
         logger.exception("Error in simple ranking")
         raise HTTPException(status_code=400, detail=str(e))
+    
     

@@ -1,5 +1,15 @@
 from typing import List, Dict
 from app.matching.final_score import calculate_final_score, FinalMatchResult
+import uuid
+
+
+def generate_cv_id(index: int = None) -> str:
+    """
+    Generate clean CV ID
+    """
+    if index is not None:
+        return f"CV-{str(index).zfill(4)}"
+    return f"CV-{str(uuid.uuid4())[:8].upper()}"
 
 
 def rank_candidates(
@@ -7,25 +17,21 @@ def rank_candidates(
     job_text: str,
     job_data: Dict
 ) -> List[FinalMatchResult]:
-    """
-    Rank multiple candidates based on match_score (descending).
-    """
 
     results: List[FinalMatchResult] = []
 
-    for parsed_cv in parsed_cvs:
+    # ======================================
+    # Process each CV
+    # ======================================
+    for idx, parsed_cv in enumerate(parsed_cvs, start=1):
 
-        # ===============================
-        # Extract Data
-        # ===============================
         cv_text = parsed_cv.get("cv_text", "")
+
+        # 🔥 Smart ID handling
         cv_id = parsed_cv.get("cv_id")
 
-        # ===============================
-        # Safety Check (important 🔥)
-        # ===============================
         if not cv_id:
-            raise ValueError("cv_id is missing for one of the candidates")
+            cv_id = generate_cv_id(idx)
 
         # ===============================
         # Calculate Score
@@ -40,13 +46,19 @@ def rank_candidates(
 
         results.append(result)
 
-    # ===============================
-    # Sort by Highest Score
-    # ===============================
+    # ======================================
+    # Sort by score
+    # ======================================
     ranked_results = sorted(
         results,
         key=lambda x: x.match_score,
         reverse=True
     )
+
+    # ======================================
+    # Assign rank AFTER sorting
+    # ======================================
+    for rank, res in enumerate(ranked_results, start=1):
+        res.rank = rank
 
     return ranked_results

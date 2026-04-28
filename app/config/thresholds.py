@@ -1,10 +1,6 @@
-"""
-thresholds.py
---------------
-Decision thresholds for Smart Recruitment AI.
-"""
+
 
 DECISION_THRESHOLDS = {
-    "accept": 0.75,
-    "pending": 0.6
+    "accept": 0.70,   # 70%+
+    "pending": 0.50   # 50% - 69%
 }
